@@ -4,6 +4,10 @@ authors = []
 description = ""
 telemetry = false
 requirements = []
+[contracts.data-registry]
+path = "contracts/data-registry.clar"
+depends_on = []
+
 [contracts.loop-forge]
 path = "contracts/loop-forge.clar"
 depends_on = []
