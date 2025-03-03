@@ -7,6 +7,8 @@
 (define-constant err-not-owner (err u102))
 (define-constant err-invalid-input (err u103))
 (define-constant err-device-inactive (err u104))
+(define-constant err-invalid-owner (err u105))
+(define-constant err-transfer-failed (err u106))
 (define-constant registration-fee u1000)
 
 ;; Data structures
@@ -39,6 +41,7 @@
       {device-id: device-id}
       {name: name, description: description}
     )
+    (print {event: "device-registered", device-id: device-id, owner: caller})
     (ok true)
   )
 )
@@ -47,10 +50,12 @@
   (let ((device (unwrap! (map-get? devices {device-id: device-id}) err-not-owner)))
     (asserts! (is-eq (get owner device) tx-sender) err-not-owner)
     (asserts! (get active device) err-device-inactive)
+    (asserts! (not (is-eq new-owner (some-principal))) err-invalid-owner)
     (map-set devices
       {device-id: device-id}
       (merge device {owner: new-owner})
     )
+    (print {event: "device-transferred", device-id: device-id, new-owner: new-owner})
     (ok true)
   )
 )
@@ -62,6 +67,7 @@
       {device-id: device-id}
       (merge device {active: false})
     )
+    (print {event: "device-deactivated", device-id: device-id})
     (ok true)
   )
 )
@@ -69,7 +75,11 @@
 (define-public (withdraw-fees)
   (let ((balance (stx-get-balance (as-contract tx-sender))))
     (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-    (as-contract (stx-transfer? balance tx-sender contract-owner))
+    (asserts! (> balance u0) err-invalid-input)
+    (match (as-contract (stx-transfer? balance tx-sender contract-owner))
+      success (ok true)
+      error err-transfer-failed
+    )
   )
 )
 
